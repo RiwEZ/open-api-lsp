@@ -2,14 +2,85 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"io"
 	"os"
 
+	"github.com/RiwEz/open-api-lsp/analysis"
+	"github.com/RiwEz/open-api-lsp/lsp"
 	"github.com/RiwEz/open-api-lsp/rpc"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-func handleMsg(_ any) {
+func writeRespMsg(writer io.Writer, msg any) {
+	reply := rpc.EncodeMsg(msg)
+	writer.Write([]byte(reply))
+}
+
+func handleMsg(writer io.Writer, state analysis.State, method string, contents []byte) {
+	log.Info().Msgf("Received msg with method: %s", method)
+
+	switch method {
+	case "initialize":
+		var request lsp.InitializeRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse initialize request")
+		}
+		log.Info().Msgf("Connected to: %s %s",
+			request.Params.ClientInfo.Name,
+			request.Params.ClientInfo.Version)
+
+		writeRespMsg(writer, lsp.NewInitializeResponse(request.ID))
+		log.Info().Msg("Sent the reply")
+
+	case "textDocument/didOpen":
+		var request lsp.DidOpenTextDocumentNotification
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/didOpen notification")
+		}
+
+		//log.Info().Msgf("Opened %s %s", request.Params.TextDocument.URI, request.Params.TextDocument.Text)
+		state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
+
+	case "textDocument/didChange":
+		var request lsp.DidChangeTextDocumentNotification
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/didChange notification")
+		}
+
+		for _, change := range request.Params.ContentChanges {
+			state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
+		}
+
+	case "textDocument/hover":
+		var request lsp.HoverRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/hover request")
+		}
+
+		resp := state.Hover(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+		writeRespMsg(writer, resp)
+
+	case "textDocument/definition":
+		var request lsp.DefinitionRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/definition request")
+		}
+
+		resp := state.Definition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+		writeRespMsg(writer, resp)
+
+	case "textDocument/codeAction":
+		var request lsp.CodeActionRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/codeAction request")
+		}
+
+		resp := state.CodeAction(request.ID, request.Params.TextDocument.URI)
+		writeRespMsg(writer, resp)
+
+	}
 }
 
 func initLogger(filename string) {
@@ -17,8 +88,9 @@ func initLogger(filename string) {
 	if err != nil {
 		panic("no file for me bro")
 	}
-  output := zerolog.ConsoleWriter{Out: logfile}
-  log.Logger = zerolog.New(output).With().Timestamp().Logger()
+	// we can change logfile for stderr in the future for :LspLog to work
+	output := zerolog.ConsoleWriter{Out: logfile}
+	log.Logger = zerolog.New(output).With().Timestamp().Logger()
 }
 
 func main() {
@@ -29,8 +101,17 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 
+	state := analysis.NewState()
+	writer := os.Stdout
+
 	for scanner.Scan() {
-		msg := scanner.Text()
-		handleMsg(msg)
+		msg := scanner.Bytes()
+		method, contents, err := rpc.DecodeMsg(msg)
+		if err != nil {
+			log.Err(err)
+			continue
+		}
+
+		handleMsg(writer, state, method, contents)
 	}
 }

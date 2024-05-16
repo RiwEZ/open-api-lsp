@@ -21,6 +21,7 @@ type BaseMessage struct {
 	Method string `json:"method"`
 }
 
+// return (method, contents, err)
 func DecodeMsg(msg []byte) (string, []byte, error) {
 	header, content, founded := bytes.Cut(msg, []byte{'\r', '\n', '\r', '\n'})
 
