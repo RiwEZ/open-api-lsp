@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func writeRespMsg(writer io.Writer, msg any) {
+func writeResponse(writer io.Writer, msg any) {
 	reply := rpc.EncodeMsg(msg)
 	writer.Write([]byte(reply))
 }
@@ -31,7 +31,7 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 			request.Params.ClientInfo.Name,
 			request.Params.ClientInfo.Version)
 
-		writeRespMsg(writer, lsp.NewInitializeResponse(request.ID))
+		writeResponse(writer, lsp.NewInitializeResponse(request.ID))
 		log.Info().Msg("Sent the reply")
 
 	case "textDocument/didOpen":
@@ -50,7 +50,17 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 		}
 
 		for _, change := range request.Params.ContentChanges {
-			state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
+			diagnostics := state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
+			writeResponse(writer, lsp.PublishDiagnosticNotifaction{
+				Notification: lsp.Notification{
+					RPC:    "2.0",
+					Method: "textDocument/publishDiagnostics",
+				},
+				Params: lsp.PublishDiagnosticParams{
+					URI:         request.Params.TextDocument.URI,
+					Diagnostics: diagnostics,
+				},
+			})
 		}
 
 	case "textDocument/hover":
@@ -60,7 +70,7 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 		}
 
 		resp := state.Hover(request.ID, request.Params.TextDocument.URI, request.Params.Position)
-		writeRespMsg(writer, resp)
+		writeResponse(writer, resp)
 
 	case "textDocument/definition":
 		var request lsp.DefinitionRequest
@@ -69,7 +79,7 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 		}
 
 		resp := state.Definition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
-		writeRespMsg(writer, resp)
+		writeResponse(writer, resp)
 
 	case "textDocument/codeAction":
 		var request lsp.CodeActionRequest
@@ -78,7 +88,16 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 		}
 
 		resp := state.CodeAction(request.ID, request.Params.TextDocument.URI)
-		writeRespMsg(writer, resp)
+		writeResponse(writer, resp)
+
+	case "textDocument/completion":
+		var request lsp.CompletionRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/completion request")
+		}
+
+		resp := state.Completion(request.ID, request.Params.TextDocument.URI)
+		writeResponse(writer, resp)
 
 	}
 }

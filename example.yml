@@ -22,4 +22,3 @@ paths:
                 type: array
                 items: 
                   type: string
-                  a: Vs Code

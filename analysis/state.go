@@ -36,9 +36,37 @@ func (s *State) OpenDocument(uri, text string) {
 	s.Documents[uri] = text
 }
 
-func (s *State) UpdateDocument(uri, text string) {
+func getDiagnosticForFile(text string) []lsp.Diagnostic {
+	diagnostics := []lsp.Diagnostic{}
+	for row, line := range strings.Split(text, "\n") {
+		if strings.Contains(line, "VS Code") {
+			idx := strings.Index(line, "VS Code")
+			diagnostics = append(diagnostics, lsp.Diagnostic{
+				Range:    LineRange(uint(row), uint(idx), uint(idx+len("VS Code"))),
+				Severity: 1,
+				Source:   "open-api-lsp",
+        Message:  "VS Code detected, :C",
+			})
+		}
+    
+		if strings.Contains(line, "Neovim") {
+			idx := strings.Index(line, "Neovim")
+			diagnostics = append(diagnostics, lsp.Diagnostic{
+				Range:    LineRange(uint(row), uint(idx), uint(idx+len("Neovim"))),
+				Severity: 0,
+				Source:   "open-api-lsp",
+        Message:  "SUper great choice",
+			})
+		}
+	}
+	return diagnostics
+}
+
+func (s *State) UpdateDocument(uri, text string) []lsp.Diagnostic {
 	// maybe support some incremental shit in the future
 	s.Documents[uri] = text
+
+	return getDiagnosticForFile(text)
 }
 
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
@@ -101,7 +129,7 @@ func (s *State) CodeAction(id int, uri string) lsp.CodeActionResponse {
 
 			actions = append(actions, lsp.CodeAction{
 				Title: "Censor to Vs Cuck",
-				Edit:  &lsp.WorkSpaceEdit{Changes: replaceChange},
+				Edit:  &lsp.WorkSpaceEdit{Changes: censorChange},
 			})
 		}
 	}
@@ -112,5 +140,26 @@ func (s *State) CodeAction(id int, uri string) lsp.CodeActionResponse {
 			ID:  &id,
 		},
 		Result: actions,
+	}
+}
+
+func (s *State) Completion(id int, uri string) lsp.CompletionResponse {
+	items := []lsp.CompletionItem{
+		{
+			Label:         "Neovim BTW",
+			Detail:        "good job to myself :D",
+			Documentation: "who read doc?",
+		},
+	}
+
+	// ask your static analysis tools to figure out good completion
+	// for our case, I think we will start with possible $ref
+
+	return lsp.CompletionResponse{
+		Response: lsp.Response{
+			RPC: "2.0",
+			ID:  &id,
+		},
+		Result: items,
 	}
 }
