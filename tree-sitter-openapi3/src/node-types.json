@@ -1,0 +1,26 @@
+[
+  {
+    "type": "source_file",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "version",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "version",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "openapi: 3.0.0",
+    "named": false
+  }
+]
