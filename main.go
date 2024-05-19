@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -18,7 +19,13 @@ func writeResponse(writer io.Writer, msg any) {
 	writer.Write([]byte(reply))
 }
 
-func handleMsg(writer io.Writer, state analysis.State, method string, contents []byte) {
+func handleMsg(
+	writer io.Writer,
+	ctx context.Context,
+	state analysis.State,
+	method string,
+	contents []byte,
+) {
 	log.Info().Msgf("Received msg with method: %s", method)
 
 	switch method {
@@ -41,7 +48,7 @@ func handleMsg(writer io.Writer, state analysis.State, method string, contents [
 		}
 
 		//log.Info().Msgf("Opened %s %s", request.Params.TextDocument.URI, request.Params.TextDocument.Text)
-		state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
+		state.OpenDocument(ctx, request.Params.TextDocument.URI, request.Params.TextDocument.Text)
 
 	case "textDocument/didChange":
 		var request lsp.DidChangeTextDocumentNotification
@@ -117,6 +124,8 @@ func main() {
 
 	log.Info().Msg("Started LSP server")
 
+	ctx := context.Background()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 
@@ -131,6 +140,6 @@ func main() {
 			continue
 		}
 
-		handleMsg(writer, state, method, contents)
+		handleMsg(writer, ctx, state, method, contents)
 	}
 }

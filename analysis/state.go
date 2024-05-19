@@ -1,15 +1,20 @@
 package analysis
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/RiwEz/open-api-lsp/lsp"
+	"github.com/rs/zerolog/log"
+	sitter "github.com/smacker/go-tree-sitter"
+	b "github.com/tree-sitter/tree-sitter-openapi3"
 )
 
 type State struct {
 	// Map of file names to content
 	Documents map[string]string
+	Tree      *sitter.Tree
 }
 
 func LineRange(line, start, end uint) lsp.Range {
@@ -32,8 +37,19 @@ func NewState() State {
 	}
 }
 
-func (s *State) OpenDocument(uri, text string) {
+func (s *State) OpenDocument(ctx context.Context, uri, text string) {
 	s.Documents[uri] = text
+
+	parser := sitter.NewParser()
+	parser.SetLanguage(sitter.NewLanguage(b.Language()))
+
+  tree, err := parser.ParseCtx(ctx, nil, []byte(text))
+  if err != nil {
+    // TODO do some thing
+    return
+  }
+  s.Tree = tree
+	log.Info().Msgf("Tree Root Node: %v", s.Tree.RootNode())
 }
 
 func getDiagnosticForFile(text string) []lsp.Diagnostic {
@@ -45,17 +61,17 @@ func getDiagnosticForFile(text string) []lsp.Diagnostic {
 				Range:    LineRange(uint(row), uint(idx), uint(idx+len("VS Code"))),
 				Severity: 1,
 				Source:   "open-api-lsp",
-        Message:  "VS Code detected, :C",
+				Message:  "VS Code detected, :C",
 			})
 		}
-    
+
 		if strings.Contains(line, "Neovim") {
 			idx := strings.Index(line, "Neovim")
 			diagnostics = append(diagnostics, lsp.Diagnostic{
 				Range:    LineRange(uint(row), uint(idx), uint(idx+len("Neovim"))),
 				Severity: 0,
 				Source:   "open-api-lsp",
-        Message:  "SUper great choice",
+				Message:  "SUper great choice",
 			})
 		}
 	}
