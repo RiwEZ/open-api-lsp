@@ -15,14 +15,14 @@ import (
 )
 
 func writeResponse(writer io.Writer, msg any) {
-	reply := rpc.EncodeMsg(msg)
-	writer.Write([]byte(reply))
+	resp := rpc.EncodeMsg(msg)
+	writer.Write([]byte(resp))
 }
 
 func handleMsg(
 	writer io.Writer,
 	ctx context.Context,
-	state analysis.State,
+	state *analysis.State,
 	method string,
 	contents []byte,
 ) {
@@ -39,7 +39,6 @@ func handleMsg(
 			request.Params.ClientInfo.Version)
 
 		writeResponse(writer, lsp.NewInitializeResponse(request.ID))
-		log.Info().Msg("Sent the reply")
 
 	case "textDocument/didOpen":
 		var request lsp.DidOpenTextDocumentNotification
@@ -48,7 +47,21 @@ func handleMsg(
 		}
 
 		//log.Info().Msgf("Opened %s %s", request.Params.TextDocument.URI, request.Params.TextDocument.Text)
-		state.OpenDocument(ctx, request.Params.TextDocument.URI, request.Params.TextDocument.Text)
+		diagnostics := state.SetDocument(
+			ctx,
+			request.Params.TextDocument.URI,
+			request.Params.TextDocument.Text,
+		)
+		writeResponse(writer, lsp.PublishDiagnosticNotifaction{
+			Notification: lsp.Notification{
+				RPC:    "2.0",
+				Method: "textDocument/publishDiagnostics",
+			},
+			Params: lsp.PublishDiagnosticParams{
+				URI:         request.Params.TextDocument.URI,
+				Diagnostics: diagnostics,
+			},
+		})
 
 	case "textDocument/didChange":
 		var request lsp.DidChangeTextDocumentNotification
@@ -56,19 +69,32 @@ func handleMsg(
 			log.Err(err).Msg("Couldn't parse textDocument/didChange notification")
 		}
 
+		// handle change ?
 		for _, change := range request.Params.ContentChanges {
-			diagnostics := state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
-			writeResponse(writer, lsp.PublishDiagnosticNotifaction{
-				Notification: lsp.Notification{
-					RPC:    "2.0",
-					Method: "textDocument/publishDiagnostics",
-				},
-				Params: lsp.PublishDiagnosticParams{
-					URI:         request.Params.TextDocument.URI,
-					Diagnostics: diagnostics,
-				},
-			})
+			state.UpdateDocument(ctx, request.Params.TextDocument.URI, change.Text)
 		}
+
+	case "textDocument/didSave":
+		var request lsp.DidSaveTextDocumentNotification
+		if err := json.Unmarshal(contents, &request); err != nil {
+			log.Err(err).Msg("Couldn't parse textDocument/didSave notification")
+		}
+
+		diagnostics := state.SetDocument(
+			ctx,
+			request.Params.TextDocument.URI,
+			request.Params.Text,
+		)
+		writeResponse(writer, lsp.PublishDiagnosticNotifaction{
+			Notification: lsp.Notification{
+				RPC:    "2.0",
+				Method: "textDocument/publishDiagnostics",
+			},
+			Params: lsp.PublishDiagnosticParams{
+				URI:         request.Params.TextDocument.URI,
+				Diagnostics: diagnostics,
+			},
+		})
 
 	case "textDocument/hover":
 		var request lsp.HoverRequest
@@ -140,6 +166,6 @@ func main() {
 			continue
 		}
 
-		handleMsg(writer, ctx, state, method, contents)
+		handleMsg(writer, ctx, &state, method, contents)
 	}
 }

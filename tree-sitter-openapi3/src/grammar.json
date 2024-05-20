@@ -2,15 +2,40 @@
   "name": "openapi3",
   "rules": {
     "source_file": {
-      "type": "SYMBOL",
-      "name": "version"
+      "type": "REPEAT",
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "version"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "info"
+          }
+        ]
+      }
     },
     "version": {
       "type": "SEQ",
       "members": [
         {
           "type": "STRING",
-          "value": "openapi: 3.0.0"
+          "value": "openapi:"
+        },
+        {
+          "type": "STRING",
+          "value": "3.0.0"
+        }
+      ]
+    },
+    "info": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "info:"
         }
       ]
     }

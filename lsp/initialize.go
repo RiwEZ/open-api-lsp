@@ -15,12 +15,21 @@ type InitializeRequest struct {
 	Params InitializeRequestParams `json:"params"`
 }
 
+type SaveOptions struct {
+	IncludeText bool `json:"includeText"`
+}
+
+type TextDocumentSyncOptions struct {
+	Save   SaveOptions `json:"save"`
+	Change int         `json:"change"`
+}
+
 type ServerCapabilities struct {
-	TextDocumentSyncKind int            `json:"textDocumentSync"`
-	HoverProvider        bool           `json:"hoverProvider"`
-	DefinitionProvider   bool           `json:"definitionProvider"`
-	CodeActionProvider   bool           `json:"codeActionProvider"`
-	CompletionProvider   map[string]any `json:"completionProvider"`
+	TextDocumentSyncKind TextDocumentSyncOptions `json:"textDocumentSync"`
+	HoverProvider        bool                    `json:"hoverProvider"`
+	DefinitionProvider   bool                    `json:"definitionProvider"`
+	CodeActionProvider   bool                    `json:"codeActionProvider"`
+	CompletionProvider   map[string]any          `json:"completionProvider"`
 }
 
 type ServerInfo struct {
@@ -46,11 +55,16 @@ func NewInitializeResponse(id int) InitializeResponse {
 		},
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
-				TextDocumentSyncKind: 1,
-				HoverProvider:        true,
-				DefinitionProvider:   true,
-				CodeActionProvider:   true,
-				CompletionProvider:   map[string]any{},
+				TextDocumentSyncKind: TextDocumentSyncOptions{
+					Change: 1, // Full text
+					Save: SaveOptions{
+						IncludeText: true,
+					},
+				},
+				HoverProvider:      true,
+				DefinitionProvider: true,
+				CodeActionProvider: true,
+				CompletionProvider: map[string]any{},
 			},
 			ServerInfo: &ServerInfo{
 				Name:    "open-api-lsp",
