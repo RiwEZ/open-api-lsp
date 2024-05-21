@@ -12,6 +12,13 @@ type Response struct {
 }
 
 type Notification struct {
-	RPC string `json:"rpc"`
+	RPC    string `json:"rpc"`
 	Method string `json:"method"`
+}
+
+func DefaultResponse(id *int) Response {
+	return Response{
+		RPC: "2.0",
+		ID:  id,
+	}
 }

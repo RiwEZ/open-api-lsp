@@ -46,7 +46,6 @@ func handleMsg(
 			log.Err(err).Msg("Couldn't parse textDocument/didOpen notification")
 		}
 
-		//log.Info().Msgf("Opened %s %s", request.Params.TextDocument.URI, request.Params.TextDocument.Text)
 		diagnostics := state.SetDocument(
 			ctx,
 			request.Params.TextDocument.URI,
@@ -129,7 +128,7 @@ func handleMsg(
 			log.Err(err).Msg("Couldn't parse textDocument/completion request")
 		}
 
-		resp := state.Completion(request.ID, request.Params.TextDocument.URI)
+		resp := state.Completion(request.ID, request.Params)
 		writeResponse(writer, resp)
 
 	}

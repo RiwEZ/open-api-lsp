@@ -2,7 +2,44 @@
   {
     "type": "info",
     "named": true,
-    "fields": {}
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        },
+        {
+          "type": "infoLabel",
+          "named": true
+        },
+        {
+          "type": "infoValue",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "infoValue",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "any",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "source_file",
@@ -10,7 +47,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "info",
@@ -26,18 +63,68 @@
   {
     "type": "version",
     "named": true,
-    "fields": {}
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "versionLabel",
+          "named": true
+        },
+        {
+          "type": "versionValue",
+          "named": true
+        }
+      ]
+    }
   },
   {
-    "type": "3.0.0",
+    "type": "\n",
     "named": false
   },
   {
-    "type": "info:",
+    "type": "\r\n",
     "named": false
   },
   {
-    "type": "openapi:",
+    "type": "0.1.9",
     "named": false
+  },
+  {
+    "type": "any",
+    "named": true
+  },
+  {
+    "type": "dedent",
+    "named": true
+  },
+  {
+    "type": "description:",
+    "named": false
+  },
+  {
+    "type": "indent",
+    "named": true
+  },
+  {
+    "type": "infoLabel",
+    "named": true
+  },
+  {
+    "type": "title:",
+    "named": false
+  },
+  {
+    "type": "version:",
+    "named": false
+  },
+  {
+    "type": "versionLabel",
+    "named": true
+  },
+  {
+    "type": "versionValue",
+    "named": true
   }
 ]

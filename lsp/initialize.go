@@ -20,8 +20,9 @@ type SaveOptions struct {
 }
 
 type TextDocumentSyncOptions struct {
-	Save   SaveOptions `json:"save"`
-	Change int         `json:"change"`
+	Save      SaveOptions `json:"save"`
+	Change    int         `json:"change"`
+	OpenClose bool        `json:"openClose"`
 }
 
 type ServerCapabilities struct {
@@ -56,6 +57,7 @@ func NewInitializeResponse(id int) InitializeResponse {
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
 				TextDocumentSyncKind: TextDocumentSyncOptions{
+          OpenClose: true,
 					Change: 1, // Full text
 					Save: SaveOptions{
 						IncludeText: true,

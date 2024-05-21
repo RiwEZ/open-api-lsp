@@ -2,7 +2,6 @@ package analysis
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/RiwEz/open-api-lsp/lsp"
@@ -15,6 +14,8 @@ type State struct {
 	// Map of file names to content
 	Documents map[string]string
 	DB        map[lsp.Range]string
+	Tree      *sitter.Tree
+	Lang      *sitter.Language
 }
 
 func LineRange(line, start, end uint) lsp.Range {
@@ -34,6 +35,8 @@ func NewState() State {
 	return State{
 		Documents: map[string]string{},
 		DB:        map[lsp.Range]string{},
+		Tree:      nil,
+		Lang:      nil,
 	}
 }
 
@@ -54,7 +57,7 @@ func prepareDB(tree *sitter.Tree, lang *sitter.Language) (map[lsp.Range]string, 
 	// map[lsp.Range]<hover content>
 	db := map[lsp.Range]string{}
 
-	q, err := sitter.NewQuery([]byte("(version) @version (info) @info"), lang)
+	q, err := sitter.NewQuery([]byte("(version (versionLabel) @version) (info (infoLabel) @info)"), lang)
 	if err != nil {
 		log.Err(err).Msg("can't create query")
 		return db, []lsp.Diagnostic{}
@@ -68,13 +71,14 @@ func prepareDB(tree *sitter.Tree, lang *sitter.Language) (map[lsp.Range]string, 
 			// if not found any match, we can return some diagnostic from here too
 			break
 		}
+
 		for _, n := range m.Captures {
 			start := n.Node.StartPoint()
 			end := n.Node.EndPoint()
 			nodeType := n.Node.Type()
 			r := rangeFromTreeSitter(start, end)
 
-			if nodeType == "version" {
+			if nodeType == "versionLabel" {
 				db[r] = "OpenAPI version"
 			}
 			if nodeType == "info" {
@@ -109,7 +113,6 @@ func getDB(position lsp.Position, db map[lsp.Range]string) (string, bool) {
 func (s *State) SetDocument(ctx context.Context, uri, text string) []lsp.Diagnostic {
 	s.Documents[uri] = text
 
-	// maybe this need to to have debounce shits on here
 	parser := sitter.NewParser()
 	lang := sitter.NewLanguage(b.Language())
 	parser.SetLanguage(lang)
@@ -121,6 +124,9 @@ func (s *State) SetDocument(ctx context.Context, uri, text string) []lsp.Diagnos
 	}
 
 	db, diagnostics := prepareDB(tree, lang)
+
+	s.Tree = tree
+	s.Lang = lang
 	s.DB = db
 	return diagnostics
 }
@@ -131,8 +137,6 @@ func (s *State) UpdateDocument(ctx context.Context, uri, text string) {
 }
 
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
-	document := s.Documents[uri]
-
 	content, founded := getDB(position, s.DB)
 	if !founded {
 		return lsp.HoverResponse{
@@ -140,9 +144,7 @@ func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverRespon
 				RPC: "2.0",
 				ID:  &id,
 			},
-			Result: lsp.HoverResult{
-				Contents: fmt.Sprintf("File: %s, Chars: %d", uri, len(document)),
-			},
+			Result: nil,
 		}
 	}
 
@@ -151,7 +153,7 @@ func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverRespon
 			RPC: "2.0",
 			ID:  &id,
 		},
-		Result: lsp.HoverResult{
+		Result: &lsp.HoverResult{
 			Contents: content,
 		},
 	}
@@ -214,23 +216,41 @@ func (s *State) CodeAction(id int, uri string) lsp.CodeActionResponse {
 	}
 }
 
-func (s *State) Completion(id int, uri string) lsp.CompletionResponse {
-	items := []lsp.CompletionItem{
-		{
-			Label:         "Neovim BTW",
-			Detail:        "good job to myself :D",
-			Documentation: "who read doc?",
-		},
+func (s *State) Completion(id int, params lsp.CompletionParams) lsp.CompletionResponse {
+	// check if position is after the versionLabel node?
+	q, err := sitter.NewQuery([]byte("(version (versionLabel) @version)"), s.Lang)
+	if err != nil {
+		log.Err(err).Msg("can't create query")
 	}
+	qc := sitter.NewQueryCursor()
+	qc.Exec(q, s.Tree.RootNode())
 
+	for {
+		m, ok := qc.NextMatch()
+		if !ok {
+			// if not found any match, we can return some diagnostic from here too
+			break
+		}
+
+		for _, n := range m.Captures {
+			end := n.Node.EndPoint()
+			if params.Position.Line == uint(end.Row) && params.Position.Character > uint(end.Column) {
+				return lsp.CompletionResponse{
+					Response: lsp.DefaultResponse(&id),
+					Result: []lsp.CompletionItem{{
+						Label:         `3.0.0`,
+						Detail:        "",
+						Documentation: "OpenAPI default version number",
+						Kind:          lsp.Value,
+					}},
+				}
+			}
+		}
+	}
 	// ask your static analysis tools to figure out good completion
 	// for our case, I think we will start with possible $ref
-
 	return lsp.CompletionResponse{
-		Response: lsp.Response{
-			RPC: "2.0",
-			ID:  &id,
-		},
-		Result: items,
+		Response: lsp.DefaultResponse(&id),
+		Result:   nil,
 	}
 }
