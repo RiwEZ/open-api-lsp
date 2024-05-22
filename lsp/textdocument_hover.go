@@ -9,8 +9,13 @@ type HoverRequest struct {
 	Params HoverParams `json:"params"`
 }
 
+type MarkupContent struct {
+	Kind  string `json:"kind"`
+	Value string `json:"value"`
+}
+
 type HoverResult struct {
-	Contents string `json:"contents"` // MarkedString only now
+	Contents MarkupContent `json:"contents"` // MarkedString only now
 }
 
 type HoverResponse struct {

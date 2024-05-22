@@ -1,5 +1,58 @@
 [
   {
+    "type": "components",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "componentsObject",
+          "named": true
+        },
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "componentsObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "schemas",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "description",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "info",
     "named": true,
     "fields": {},
@@ -16,18 +69,18 @@
           "named": true
         },
         {
-          "type": "infoLabel",
+          "type": "infoFieldName",
           "named": true
         },
         {
-          "type": "infoValue",
+          "type": "infoObject",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "infoValue",
+    "type": "infoObject",
     "named": true,
     "fields": {},
     "children": {
@@ -35,7 +88,199 @@
       "required": true,
       "types": [
         {
-          "type": "any",
+          "type": "description",
+          "named": true
+        },
+        {
+          "type": "title",
+          "named": true
+        },
+        {
+          "type": "version",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "openAPIObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "components",
+          "named": true
+        },
+        {
+          "type": "info",
+          "named": true
+        },
+        {
+          "type": "openapi",
+          "named": true
+        },
+        {
+          "type": "paths",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "openapi",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "openapiFieldName",
+          "named": true
+        },
+        {
+          "type": "value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "operationObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        },
+        {
+          "type": "key",
+          "named": true
+        },
+        {
+          "type": "value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pathItemObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        },
+        {
+          "type": "operationObject",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "paths",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        },
+        {
+          "type": "pathsFieldName",
+          "named": true
+        },
+        {
+          "type": "pathsObject",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pathsObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "pathFieldPattern",
+          "named": true
+        },
+        {
+          "type": "pathItemObject",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "schemaObject",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "key",
+          "named": true
+        },
+        {
+          "type": "value",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "schemas",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "dedent",
+          "named": true
+        },
+        {
+          "type": "indent",
+          "named": true
+        },
+        {
+          "type": "schemaObject",
           "named": true
         }
       ]
@@ -46,15 +291,30 @@
     "named": true,
     "fields": {},
     "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "openAPIObject",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "title",
+    "named": true,
+    "fields": {},
+    "children": {
       "multiple": true,
       "required": true,
       "types": [
         {
-          "type": "info",
+          "type": "titleFieldName",
           "named": true
         },
         {
-          "type": "version",
+          "type": "value",
           "named": true
         }
       ]
@@ -69,11 +329,11 @@
       "required": true,
       "types": [
         {
-          "type": "versionLabel",
+          "type": "value",
           "named": true
         },
         {
-          "type": "versionValue",
+          "type": "versionFieldName",
           "named": true
         }
       ]
@@ -88,12 +348,8 @@
     "named": false
   },
   {
-    "type": "0.1.9",
+    "type": "components:",
     "named": false
-  },
-  {
-    "type": "any",
-    "named": true
   },
   {
     "type": "dedent",
@@ -104,27 +360,51 @@
     "named": false
   },
   {
+    "type": "get:",
+    "named": false
+  },
+  {
     "type": "indent",
     "named": true
   },
   {
-    "type": "infoLabel",
+    "type": "infoFieldName",
     "named": true
   },
   {
-    "type": "title:",
-    "named": false
-  },
-  {
-    "type": "version:",
-    "named": false
-  },
-  {
-    "type": "versionLabel",
+    "type": "key",
     "named": true
   },
   {
-    "type": "versionValue",
+    "type": "openapiFieldName",
+    "named": true
+  },
+  {
+    "type": "pathFieldPattern",
+    "named": true
+  },
+  {
+    "type": "pathsFieldName",
+    "named": true
+  },
+  {
+    "type": "responses:",
+    "named": false
+  },
+  {
+    "type": "schemas:",
+    "named": false
+  },
+  {
+    "type": "titleFieldName",
+    "named": true
+  },
+  {
+    "type": "value",
+    "named": true
+  },
+  {
+    "type": "versionFieldName",
     "named": true
   }
 ]

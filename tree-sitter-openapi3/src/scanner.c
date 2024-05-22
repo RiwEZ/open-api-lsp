@@ -9,15 +9,6 @@ enum TokenType {
 };
 
 void *tree_sitter_openapi3_external_scanner_create(void) {
-    /*
-    void *payload = ts_calloc(1, sizeof(Array(uint32_t)));
-    Array(uint32_t) *stack = payload;
-
-    // the fuck, is this initialized? ??
-    array_init(stack);
-    array_push(stack, 0);
-    */
-
     return ts_calloc(1, sizeof(Array(uint32_t)));
 }
 
@@ -71,7 +62,16 @@ bool tree_sitter_openapi3_external_scanner_scan(
     TSLexer *lexer,
     const bool *valid_symbols
 ) {
+    Array(uint32_t) *stack = payload;
+
     if (lexer->eof(lexer)) {
+        // pop remaining indentations
+        if (stack->size > 0) {
+            array_pop(stack);
+            lexer->mark_end(lexer);
+            lexer->result_symbol = DEDENT;
+            return true;
+        }
         return false;
     }
 
@@ -83,8 +83,6 @@ bool tree_sitter_openapi3_external_scanner_scan(
         }
 
         // generating INDENT and DEDENT
-        Array(uint32_t) *stack = payload;
-
         uint32_t curr_indent = lexer->get_column(lexer);
         uint32_t last_indent = stack->size > 0 ? *array_back(stack) : 0; // this is weird too
 
@@ -102,7 +100,6 @@ bool tree_sitter_openapi3_external_scanner_scan(
             lexer->result_symbol = DEDENT;
             return true;
         }
-
     }
 
     return false;

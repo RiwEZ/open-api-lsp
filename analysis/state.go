@@ -13,7 +13,7 @@ import (
 type State struct {
 	// Map of file names to content
 	Documents map[string]string
-	DB        map[lsp.Range]string
+	DB        RangeDB
 	Tree      *sitter.Tree
 	Lang      *sitter.Language
 }
@@ -34,80 +34,10 @@ func LineRange(line, start, end uint) lsp.Range {
 func NewState() State {
 	return State{
 		Documents: map[string]string{},
-		DB:        map[lsp.Range]string{},
+		DB:        &ConcreteRangeDB{data: map[lsp.Range]LspInfo{}},
 		Tree:      nil,
 		Lang:      nil,
 	}
-}
-
-func rangeFromTreeSitter(start, end sitter.Point) lsp.Range {
-	return lsp.Range{
-		Start: lsp.Position{
-			Line:      uint(start.Row),
-			Character: uint(start.Column),
-		},
-		End: lsp.Position{
-			Line:      uint(end.Row),
-			Character: uint(end.Column),
-		},
-	}
-}
-
-func prepareDB(tree *sitter.Tree, lang *sitter.Language) (map[lsp.Range]string, []lsp.Diagnostic) {
-	// map[lsp.Range]<hover content>
-	db := map[lsp.Range]string{}
-
-	q, err := sitter.NewQuery([]byte("(version (versionLabel) @version) (info (infoLabel) @info)"), lang)
-	if err != nil {
-		log.Err(err).Msg("can't create query")
-		return db, []lsp.Diagnostic{}
-	}
-	qc := sitter.NewQueryCursor()
-	qc.Exec(q, tree.RootNode())
-
-	for {
-		m, ok := qc.NextMatch()
-		if !ok {
-			// if not found any match, we can return some diagnostic from here too
-			break
-		}
-
-		for _, n := range m.Captures {
-			start := n.Node.StartPoint()
-			end := n.Node.EndPoint()
-			nodeType := n.Node.Type()
-			r := rangeFromTreeSitter(start, end)
-
-			if nodeType == "versionLabel" {
-				db[r] = "OpenAPI version"
-			}
-			if nodeType == "info" {
-				db[r] = "Info about this OpenAPI"
-			}
-		}
-	}
-
-	if len(db) == 0 {
-		return db, []lsp.Diagnostic{{
-			Range:    LineRange(0, 0, 0),
-			Severity: 1,
-			Source:   "open-api-lsp",
-			Message:  "This file does not have correct OpenAPI shits",
-		}}
-	}
-
-	return db, []lsp.Diagnostic{}
-}
-
-func getDB(position lsp.Position, db map[lsp.Range]string) (string, bool) {
-	// this run in O(n), maybe we can use Interval/Segment Tree to improve it
-	for key, value := range db {
-		if (position.Line >= key.Start.Line && position.Line <= key.End.Line) &&
-			(position.Character >= key.Start.Character && position.Character <= key.End.Character) {
-			return value, true
-		}
-	}
-	return "", false
 }
 
 func (s *State) SetDocument(ctx context.Context, uri, text string) []lsp.Diagnostic {
@@ -123,11 +53,10 @@ func (s *State) SetDocument(ctx context.Context, uri, text string) []lsp.Diagnos
 		return []lsp.Diagnostic{}
 	}
 
-	db, diagnostics := prepareDB(tree, lang)
+	diagnostics := s.DB.Prepare(tree, lang)
 
 	s.Tree = tree
 	s.Lang = lang
-	s.DB = db
 	return diagnostics
 }
 
@@ -137,25 +66,18 @@ func (s *State) UpdateDocument(ctx context.Context, uri, text string) {
 }
 
 func (s *State) Hover(id int, uri string, position lsp.Position) lsp.HoverResponse {
-	content, founded := getDB(position, s.DB)
+	lspInfo, founded := s.DB.Get(position)
+
 	if !founded {
 		return lsp.HoverResponse{
-			Response: lsp.Response{
-				RPC: "2.0",
-				ID:  &id,
-			},
-			Result: nil,
+			Response: lsp.DefaultResponse(&id),
+			Result:   nil,
 		}
 	}
 
 	return lsp.HoverResponse{
-		Response: lsp.Response{
-			RPC: "2.0",
-			ID:  &id,
-		},
-		Result: &lsp.HoverResult{
-			Contents: content,
-		},
+		Response: lsp.DefaultResponse(&id),
+		Result:   &lspInfo.Hover,
 	}
 }
 
@@ -217,40 +139,17 @@ func (s *State) CodeAction(id int, uri string) lsp.CodeActionResponse {
 }
 
 func (s *State) Completion(id int, params lsp.CompletionParams) lsp.CompletionResponse {
-	// check if position is after the versionLabel node?
-	q, err := sitter.NewQuery([]byte("(version (versionLabel) @version)"), s.Lang)
-	if err != nil {
-		log.Err(err).Msg("can't create query")
-	}
-	qc := sitter.NewQueryCursor()
-	qc.Exec(q, s.Tree.RootNode())
+	lspInfo, founded := s.DB.AnyAfter(params.Position)
 
-	for {
-		m, ok := qc.NextMatch()
-		if !ok {
-			// if not found any match, we can return some diagnostic from here too
-			break
-		}
-
-		for _, n := range m.Captures {
-			end := n.Node.EndPoint()
-			if params.Position.Line == uint(end.Row) && params.Position.Character > uint(end.Column) {
-				return lsp.CompletionResponse{
-					Response: lsp.DefaultResponse(&id),
-					Result: []lsp.CompletionItem{{
-						Label:         `3.0.0`,
-						Detail:        "",
-						Documentation: "OpenAPI default version number",
-						Kind:          lsp.Value,
-					}},
-				}
-			}
+	if !founded {
+		return lsp.CompletionResponse{
+			Response: lsp.DefaultResponse(&id),
+			Result:   nil,
 		}
 	}
-	// ask your static analysis tools to figure out good completion
-	// for our case, I think we will start with possible $ref
+
 	return lsp.CompletionResponse{
 		Response: lsp.DefaultResponse(&id),
-		Result:   nil,
+		Result:   lspInfo.Completions,
 	}
 }
